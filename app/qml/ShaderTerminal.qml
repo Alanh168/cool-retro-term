@@ -233,14 +233,18 @@ Item {
              "}" +
 
              "vec3 convertWithChroma(vec3 inColor) {
-                vec3 outColor = inColor;" +
+                vec3 outColor = inColor;
+                float redDominance = inColor.r - max(inColor.g, inColor.b);
+                float isRed = smoothstep(0.15, 0.3, redDominance) * step(0.2, inColor.r);
+                vec3 amberColor = vec3(1.0, 0.65, 0.0) * rgb2grey(inColor) * 1.5;" +
 
                  (chromaColor !== 0 ?
-                     "outColor = fontColor.rgb * mix(vec3(rgb2grey(inColor)), inColor, chromaColor);"
+                     "vec3 monoColor = fontColor.rgb * mix(vec3(rgb2grey(inColor)), inColor, chromaColor);"
                  :
-                     "outColor = fontColor.rgb * rgb2grey(inColor);") +
+                     "vec3 monoColor = fontColor.rgb * rgb2grey(inColor);") +
 
-             "  return outColor;
+             "  outColor = mix(monoColor, amberColor, isRed);
+                return outColor;
              }" +
 
              "void main() {" +
@@ -437,14 +441,18 @@ Item {
              shaderLibrary.rgb2grey +
 
              "vec3 convertWithChroma(vec3 inColor) {
-                vec3 outColor = inColor;" +
+                vec3 outColor = inColor;
+                float redDominance = inColor.r - max(inColor.g, inColor.b);
+                float isRed = smoothstep(0.15, 0.3, redDominance) * step(0.2, inColor.r);
+                vec3 amberColor = vec3(1.0, 0.65, 0.0) * rgb2grey(inColor) * 1.5;" +
 
                  (chromaColor !== 0 ?
-                     "outColor = fontColor.rgb * mix(vec3(rgb2grey(inColor)), inColor, chromaColor);"
+                     "vec3 monoColor = fontColor.rgb * mix(vec3(rgb2grey(inColor)), inColor, chromaColor);"
                  :
-                     "outColor = fontColor.rgb * rgb2grey(inColor);") +
+                     "vec3 monoColor = fontColor.rgb * rgb2grey(inColor);") +
 
-             "  return outColor;
+             "  outColor = mix(monoColor, amberColor, isRed);
+                return outColor;
              }" +
 
              shaderLibrary.rasterizationShader +
