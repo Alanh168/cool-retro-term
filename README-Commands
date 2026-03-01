@@ -1,0 +1,16 @@
+# 1. Install Qt5 (one-time)
+brew install qt@5
+
+# 2. Initialize submodules (one-time)
+cd ~/repos/writing-env/cool-retro-term
+git submodule update --init --recursive
+
+# 3. Generate Makefiles with qmake
+/opt/homebrew/opt/qt@5/bin/qmake
+
+# 4. Build
+make -j$(sysctl -n hw.ncpu)
+
+# 5. Copy to Applications (as test app)
+cp -R cool-retro-term.app "/Applications/Retro Terminal TEST.app"
+Steps 3-5 are what you repeat after making changes. The built app is at cool-retro-term/cool-retro-term.app.
