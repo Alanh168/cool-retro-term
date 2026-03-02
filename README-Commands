@@ -11,6 +11,10 @@ git submodule update --init --recursive
 # 4. Build
 make -j$(sysctl -n hw.ncpu)
 
-# 5. Copy to Applications (as test app)
-cp -R cool-retro-term.app "/Applications/Retro Terminal TEST.app"
-Steps 3-5 are what you repeat after making changes. The built app is at cool-retro-term/cool-retro-term.app.
+# 5. Rewrite the app bundle to use its bundled Qt frameworks and plugins
+/opt/homebrew/opt/qt@5/bin/macdeployqt cool-retro-term.app
+
+# 6. Copy to Applications (as test app) and re-sign it
+rsync -a --delete cool-retro-term.app/ "/Applications/Retro Terminal TEST.app/" && codesign --force --deep --sign - "/Applications/Retro Terminal TEST.app"
+
+Steps 3-6 are what you repeat after making changes. The built app is at cool-retro-term/cool-retro-term.app.
