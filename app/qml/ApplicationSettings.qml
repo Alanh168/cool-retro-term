@@ -25,6 +25,7 @@ import "utils.js" as Utils
 QtObject {
     readonly property string version: appVersion
     readonly property int profileVersion: 2
+    readonly property string defaultProfileName: "Old School Green"
 
     // STATIC CONSTANTS ////////////////////////////////////////////////////////
     readonly property real screenCurvatureSize: 0.4
@@ -45,7 +46,7 @@ QtObject {
     property bool fullscreen: false
     property bool showMenubar: false
 
-    property string wintitle: "cool-retro-term"
+    property string wintitle: "Retro Terminal"
 
     property bool showTerminalSize: true
     property real windowScaling: 1.0
@@ -70,7 +71,7 @@ QtObject {
     property string customCommand: ""
 
     property string _backgroundColor: "#000000"
-    property string _fontColor: "#ff8100"
+    property string _fontColor: "#0ccc68"
     property string saturatedColor: Utils.mix(Utils.strToColor("#FFFFFF"),
                                               Utils.strToColor(_fontColor),
                                               saturationColor * 0.5)
@@ -88,8 +89,8 @@ QtObject {
     property real burnIn: 0.25
     property real bloom: 0.55
 
-    property real chromaColor: 0.25
-    property real saturationColor: 0.25
+    property real chromaColor: 0.0
+    property real saturationColor: 0.0
 
     property real jitter: 0.2
 
@@ -285,15 +286,17 @@ QtObject {
         var profileString = storage.getSetting("_CURRENT_PROFILE")
 
         if (!settingsString)
-            return
+            return false
         if (!profileString)
-            return
+            return false
 
         loadSettingsString(settingsString)
         loadProfileString(profileString)
 
         if (verbose)
             console.log("Loading settings: " + settingsString + profileString)
+
+        return true
     }
 
     function storeSettings() {
@@ -699,6 +702,36 @@ QtObject {
             }'
             builtin: true
         }
+        ListElement {
+            text: "Old School Green"
+            obj_string: '{
+                "ambientLight": 0.3038,
+                "backgroundColor": "#000000",
+                "bloom": 0.5,
+                "brightness": 0.5,
+                "burnIn": 0,
+                "chromaColor": 0,
+                "contrast": 0.85,
+                "flickering": 0.2,
+                "fontColor": "#00d56d",
+                "fontName": "APPLE_II",
+                "fontWidth": 1,
+                "frameMargin": 0,
+                "glowingLine": 0.22,
+                "horizontalSync": 0.16,
+                "jitter": 0.1,
+                "rasterization": 1,
+                "rbgShift": 0,
+                "saturationColor": 0,
+                "screenCurvature": 0,
+                "staticNoise": 0.0272,
+                "windowOpacity": 1,
+                "margin": 0.5,
+                "blinkingCursor": false,
+                "frameMargin": 0.2
+            }'
+            builtin: true
+        }
     }
 
     function getProfileIndexByName(name) {
@@ -712,14 +745,21 @@ QtObject {
     Component.onCompleted: {
         // Manage the arguments from the QML side.
         var args = Qt.application.arguments
+        var loadedStoredSettings = false
         if (args.indexOf("--verbose") !== -1) {
             verbose = true
         }
         if (args.indexOf("--default-settings") === -1) {
-            loadSettings()
+            loadedStoredSettings = loadSettings()
         }
 
         loadCustomProfiles()
+
+        if (!loadedStoredSettings) {
+            var defaultProfileIndex = getProfileIndexByName(defaultProfileName)
+            if (defaultProfileIndex !== -1)
+                loadProfile(defaultProfileIndex)
+        }
 
         var profileArgPosition = args.indexOf("--profile")
         if (profileArgPosition !== -1) {

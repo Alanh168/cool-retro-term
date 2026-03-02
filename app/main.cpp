@@ -13,6 +13,8 @@
 
 #include <QFontDatabase>
 #include <QLoggingCategory>
+#include <QDir>
+#include <QFileInfo>
 
 #include <fileio.h>
 #include <monospacefontmanager.h>
@@ -98,6 +100,9 @@ int main(int argc, char *argv[])
     engine.rootContext()->setContextProperty("appVersion", appVersion);
     engine.rootContext()->setContextProperty("defaultCmd", command);
     engine.rootContext()->setContextProperty("defaultCmdArgs", commandArgs);
+    engine.rootContext()->setContextProperty(
+                "storageNamespace",
+                QFileInfo(QDir(QCoreApplication::applicationDirPath()).absolutePath()).absoluteFilePath());
 
     engine.rootContext()->setContextProperty("workdir", getNamedArgument(args, "--workdir", "$HOME"));
     engine.rootContext()->setContextProperty("fileIO", &fileIO);
