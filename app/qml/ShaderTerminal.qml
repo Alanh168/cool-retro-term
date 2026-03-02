@@ -236,7 +236,7 @@ Item {
                 vec3 outColor = inColor;
                 float redDominance = inColor.r - max(inColor.g, inColor.b);
                 float isRed = smoothstep(0.15, 0.3, redDominance) * step(0.2, inColor.r);
-                vec3 amberColor = vec3(1.0, 0.65, 0.0) * rgb2grey(inColor) * 1.5;" +
+                vec3 amberColor = vec3(1.0, 0.55, 0.0) * inColor.r * 1.2;" +
 
                  (chromaColor !== 0 ?
                      "vec3 monoColor = fontColor.rgb * mix(vec3(rgb2grey(inColor)), inColor, chromaColor);"
@@ -444,7 +444,7 @@ Item {
                 vec3 outColor = inColor;
                 float redDominance = inColor.r - max(inColor.g, inColor.b);
                 float isRed = smoothstep(0.15, 0.3, redDominance) * step(0.2, inColor.r);
-                vec3 amberColor = vec3(1.0, 0.65, 0.0) * rgb2grey(inColor) * 1.5;" +
+                vec3 amberColor = vec3(1.0, 0.55, 0.0) * inColor.r * 1.2;" +
 
                  (chromaColor !== 0 ?
                      "vec3 monoColor = fontColor.rgb * mix(vec3(rgb2grey(inColor)), inColor, chromaColor);"
@@ -491,7 +491,7 @@ Item {
                      "vec3 foregroundColor = mix(fontColor.rgb, txt_color * fontColor.rgb / greyscale_color, chromaColor);
                       vec3 finalColor = mix(backgroundColor.rgb, foregroundColor, greyscale_color * reflectionMask);"
                  :
-                     "vec3 finalColor = mix(backgroundColor.rgb, fontColor.rgb, greyscale_color * reflectionMask);") +
+                     "vec3 finalColor = mix(backgroundColor.rgb, convertWithChroma(txt_color), reflectionMask);") +
 
                      (bloom !== 0 ?
                          "vec4 bloomFullColor = texture2D(bloomSource, txt_coords);
