@@ -129,6 +129,13 @@ ApplicationWindow {
         onTriggered: appSettings.decrementScaling()
     }
     Action {
+        id: colorConversionAction
+        text: qsTr("Color Conversion")
+        checkable: true
+        checked: appSettings.colorConversion
+        onTriggered: appSettings.colorConversion = !appSettings.colorConversion
+    }
+    Action {
         id: showAboutAction
         text: qsTr("About")
         onTriggered: {

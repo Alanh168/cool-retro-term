@@ -69,6 +69,10 @@ Menu {
         MenuItem {
             action: zoomOut
         }
+        MenuSeparator {}
+        MenuItem {
+            action: colorConversionAction
+        }
     }
     Menu {
         id: profilesMenu

@@ -91,6 +91,7 @@ QtObject {
 
     property real chromaColor: 0.0
     property real saturationColor: 0.0
+    property bool colorConversion: true
 
     property real jitter: 0.2
 
@@ -273,6 +274,7 @@ QtObject {
             "margin": _margin,
             "blinkingCursor": blinkingCursor,
             "frameMargin": _frameMargin,
+            "colorConversion": colorConversion,
         }
         return settings
     }
@@ -384,6 +386,7 @@ QtObject {
         _frameMargin = settings.frameMargin !== undefined ? settings.frameMargin : _frameMargin
 
         blinkingCursor = settings.blinkingCursor !== undefined ? settings.blinkingCursor : blinkingCursor
+        colorConversion = settings.colorConversion !== undefined ? settings.colorConversion : colorConversion
 
         handleFontChanged()
     }

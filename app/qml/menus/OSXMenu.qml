@@ -62,6 +62,13 @@ MenuBar {
             shortcut: "Meta+-"
             onTriggered: zoomOut.trigger()
         }
+        MenuSeparator {}
+        MenuItem {
+            text: colorConversionAction.text
+            checkable: true
+            checked: appSettings.colorConversion
+            onTriggered: colorConversionAction.trigger()
+        }
     }
     Menu {
         id: profilesMenu

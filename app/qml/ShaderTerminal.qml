@@ -34,6 +34,7 @@ Item {
     property real screenCurvature: appSettings.screenCurvature * appSettings.screenCurvatureSize
 
     property real chromaColor: appSettings.chromaColor
+    property bool colorConversion: appSettings.colorConversion
 
     property real ambientLight: appSettings.ambientLight * 0.2
 
@@ -58,6 +59,7 @@ Item {
          property color backgroundColor: parent.backgroundColor
          property real screenCurvature: parent.screenCurvature
          property real chromaColor: parent.chromaColor
+         property bool colorConversion: parent.colorConversion
          property real ambientLight: parent.ambientLight
 
          property real flickering: appSettings.flickering
@@ -233,18 +235,27 @@ Item {
              "}" +
 
              "vec3 convertWithChroma(vec3 inColor) {
-                vec3 outColor = inColor;
-                float redDominance = inColor.r - max(inColor.g, inColor.b);
-                float isRed = smoothstep(0.15, 0.3, redDominance) * step(0.2, inColor.r);
-                vec3 amberColor = vec3(1.0, 0.55, 0.0) * inColor.r * 1.2;" +
+                vec3 outColor = inColor;" +
+
+             (colorConversion ?
+                 "float sat = max(inColor.r, max(inColor.g, inColor.b)) - min(inColor.r, min(inColor.g, inColor.b));
+                  float isChromatic = step(0.2, sat);
+                  vec3 monoColor = fontColor.rgb * rgb2grey(inColor);
+                  return mix(monoColor, inColor, isChromatic);"
+             :
+
+                 "float redDominance = inColor.r - max(inColor.g, inColor.b);
+                  float isRed = smoothstep(0.15, 0.3, redDominance) * step(0.2, inColor.r);
+                  vec3 amberColor = vec3(1.0, 0.55, 0.0) * inColor.r * 1.2;" +
 
                  (chromaColor !== 0 ?
                      "vec3 monoColor = fontColor.rgb * mix(vec3(rgb2grey(inColor)), inColor, chromaColor);"
                  :
                      "vec3 monoColor = fontColor.rgb * rgb2grey(inColor);") +
 
-             "  outColor = mix(monoColor, amberColor, isRed);
-                return outColor;
+                 "outColor = monoColor;") +
+
+             "  return outColor;
              }" +
 
              "void main() {" +
@@ -386,6 +397,7 @@ Item {
          property real screenCurvature: parent.screenCurvature
 
          property real chromaColor: appSettings.chromaColor;
+         property bool colorConversion: parent.colorConversion
 
          property real rbgShift: (appSettings.rbgShift / width) * appSettings.totalFontScaling // TODO FILIPPO width here is wrong.
 
@@ -441,18 +453,27 @@ Item {
              shaderLibrary.rgb2grey +
 
              "vec3 convertWithChroma(vec3 inColor) {
-                vec3 outColor = inColor;
-                float redDominance = inColor.r - max(inColor.g, inColor.b);
-                float isRed = smoothstep(0.15, 0.3, redDominance) * step(0.2, inColor.r);
-                vec3 amberColor = vec3(1.0, 0.55, 0.0) * inColor.r * 1.2;" +
+                vec3 outColor = inColor;" +
+
+             (colorConversion ?
+                 "float sat = max(inColor.r, max(inColor.g, inColor.b)) - min(inColor.r, min(inColor.g, inColor.b));
+                  float isChromatic = step(0.2, sat);
+                  vec3 monoColor = fontColor.rgb * rgb2grey(inColor);
+                  return mix(monoColor, inColor, isChromatic);"
+             :
+
+                 "float redDominance = inColor.r - max(inColor.g, inColor.b);
+                  float isRed = smoothstep(0.15, 0.3, redDominance) * step(0.2, inColor.r);
+                  vec3 amberColor = vec3(1.0, 0.55, 0.0) * inColor.r * 1.2;" +
 
                  (chromaColor !== 0 ?
                      "vec3 monoColor = fontColor.rgb * mix(vec3(rgb2grey(inColor)), inColor, chromaColor);"
                  :
                      "vec3 monoColor = fontColor.rgb * rgb2grey(inColor);") +
 
-             "  outColor = mix(monoColor, amberColor, isRed);
-                return outColor;
+                 "outColor = monoColor;") +
+
+             "  return outColor;
              }" +
 
              shaderLibrary.rasterizationShader +
@@ -491,7 +512,15 @@ Item {
                      "vec3 foregroundColor = mix(fontColor.rgb, txt_color * fontColor.rgb / greyscale_color, chromaColor);
                       vec3 finalColor = mix(backgroundColor.rgb, foregroundColor, greyscale_color * reflectionMask);"
                  :
-                     "vec3 finalColor = mix(backgroundColor.rgb, convertWithChroma(txt_color), reflectionMask);") +
+                     (colorConversion ?
+                         "float sat = max(txt_color.r, max(txt_color.g, txt_color.b)) - min(txt_color.r, min(txt_color.g, txt_color.b));
+                          float isChromatic = step(0.2, sat);
+                          vec3 greenFg = fontColor.rgb * greyscale_color;
+                          vec3 fgColor = mix(greenFg, txt_color, isChromatic);
+                          vec3 finalColor = mix(backgroundColor.rgb, fgColor, reflectionMask);"
+                     :
+                         "vec3 finalColor = mix(backgroundColor.rgb, fontColor.rgb * greyscale_color, reflectionMask);")
+                 ) +
 
                      (bloom !== 0 ?
                          "vec4 bloomFullColor = texture2D(bloomSource, txt_coords);
