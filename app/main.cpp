@@ -15,9 +15,69 @@
 #include <QLoggingCategory>
 #include <QDir>
 #include <QFileInfo>
+#include <QKeyEvent>
+#include <QTextStream>
 
 #include <fileio.h>
 #include <monospacefontmanager.h>
+
+namespace {
+
+
+class KeyLogger : public QObject
+{
+public:
+    using QObject::QObject;
+
+    bool eventFilter(QObject* watched, QEvent* event) override
+    {
+        static bool remapping = false;
+
+        if (event->type() != QEvent::KeyPress &&
+            event->type() != QEvent::ShortcutOverride)
+            return QObject::eventFilter(watched, event);
+
+        auto* keyEvent = static_cast<QKeyEvent*>(event);
+        auto modifiers = keyEvent->modifiers();
+        if (!(modifiers & (Qt::ControlModifier | Qt::MetaModifier)))
+            return QObject::eventFilter(watched, event);
+
+        const bool isTerminalTarget =
+            watched &&
+            QString::fromLatin1(watched->metaObject()->className()).contains("TerminalDisplay");
+
+        if (!remapping &&
+            isTerminalTarget &&
+            (modifiers & Qt::MetaModifier) &&
+            !(modifiers & Qt::ControlModifier) &&
+            keyEvent->key() != Qt::Key_Meta)
+        {
+            Qt::KeyboardModifiers remappedModifiers = modifiers;
+            remappedModifiers &= ~Qt::MetaModifier;
+            remappedModifiers |= Qt::ControlModifier;
+
+            QKeyEvent remappedEvent(
+                event->type(),
+                keyEvent->key(),
+                remappedModifiers,
+                keyEvent->nativeScanCode(),
+                keyEvent->nativeVirtualKey(),
+                keyEvent->nativeModifiers(),
+                keyEvent->text(),
+                keyEvent->isAutoRepeat(),
+                keyEvent->count());
+
+            remapping = true;
+            QCoreApplication::sendEvent(watched, &remappedEvent);
+            remapping = false;
+            return true;
+        }
+
+        return QObject::eventFilter(watched, event);
+    }
+};
+
+}
 
 QString getNamedArgument(QStringList args, QString name, QString defaultName)
 {
@@ -71,8 +131,10 @@ int main(int argc, char *argv[])
         return 0;
     }
 
+    QApplication::setAttribute(Qt::AA_MacDontSwapCtrlAndMeta, true);
     QApplication app(argc, argv);
-    app.setAttribute(Qt::AA_MacDontSwapCtrlAndMeta, true);
+    KeyLogger keyLogger;
+    app.installEventFilter(&keyLogger);
 
     QQmlApplicationEngine engine;
     FileIO fileIO;

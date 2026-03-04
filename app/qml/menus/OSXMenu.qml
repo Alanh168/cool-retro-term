@@ -28,6 +28,7 @@ MenuBar {
         title: qsTr("File")
         MenuItem {
             text: quitAction.text
+            shortcut: "Meta+Shift+Q"
             onTriggered: quitAction.trigger()
         }
     }
@@ -35,12 +36,12 @@ MenuBar {
         title: qsTr("Edit")
         MenuItem {
             text: copyAction.text
-            shortcut: "Meta+C"
+            shortcut: "Meta+Shift+C"
             onTriggered: copyAction.trigger()
         }
         MenuItem {
             text: pasteAction.text
-            shortcut: "Meta+V"
+            shortcut: "Meta+Shift+V"
             onTriggered: pasteAction.trigger()
         }
         MenuSeparator {}
