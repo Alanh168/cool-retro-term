@@ -1,0 +1,18 @@
+#!/bin/bash
+set -e
+
+cd "$(dirname "$0")"
+
+# 3. Generate Makefiles with qmake
+/opt/homebrew/opt/qt@5/bin/qmake
+
+# 4. Build
+make -j$(sysctl -n hw.ncpu)
+
+# 5. Rewrite the app bundle to use its bundled Qt frameworks and plugins
+/opt/homebrew/opt/qt@5/bin/macdeployqt cool-retro-term.app
+
+# 6. Copy to Applications (as test app) and re-sign it
+rsync -a --delete cool-retro-term.app/ "/Applications/Retro Terminal TEST.app/" && codesign --force --deep --sign - "/Applications/Retro Terminal TEST.app"
+
+echo "Done. Launch 'Retro Terminal TEST' from Applications."
