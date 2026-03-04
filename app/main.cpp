@@ -14,6 +14,7 @@
 #include <QFontDatabase>
 #include <QLoggingCategory>
 #include <QDir>
+#include <QFile>
 #include <QFileInfo>
 #include <QKeyEvent>
 #include <QTextStream>
@@ -23,6 +24,31 @@
 
 namespace {
 
+QString formatModifiers(Qt::KeyboardModifiers modifiers)
+{
+    QStringList parts;
+    if (modifiers & Qt::ShiftModifier)
+        parts << "Shift";
+    if (modifiers & Qt::ControlModifier)
+        parts << "Control";
+    if (modifiers & Qt::AltModifier)
+        parts << "Alt";
+    if (modifiers & Qt::MetaModifier)
+        parts << "Meta";
+    if (parts.isEmpty())
+        return "None";
+    return parts.join("+");
+}
+
+void appendKeyLogLine(const QString& line)
+{
+    QFile logFile("/tmp/crt_key_debug.log");
+    if (!logFile.open(QIODevice::WriteOnly | QIODevice::Append | QIODevice::Text))
+        return;
+
+    QTextStream out(&logFile);
+    out << line << "\n";
+}
 
 class KeyLogger : public QObject
 {
@@ -41,6 +67,16 @@ public:
         auto modifiers = keyEvent->modifiers();
         if (!(modifiers & (Qt::ControlModifier | Qt::MetaModifier)))
             return QObject::eventFilter(watched, event);
+
+        const QString line =
+            QString("[app-keylog] type=%1 key=%2 text=\"%3\" modifiers=%4 accepted=%5 target=%6")
+                .arg(event->type() == QEvent::KeyPress ? "KeyPress" : "ShortcutOverride")
+                .arg(keyEvent->key())
+                .arg(keyEvent->text())
+                .arg(formatModifiers(modifiers))
+                .arg(keyEvent->isAccepted() ? "true" : "false")
+                .arg(watched ? watched->metaObject()->className() : "null");
+        appendKeyLogLine(line);
 
         const bool isTerminalTarget =
             watched &&
@@ -66,6 +102,16 @@ public:
                 keyEvent->text(),
                 keyEvent->isAutoRepeat(),
                 keyEvent->count());
+
+            const QString remapLine =
+                QString("[app-remap] type=%1 key=%2 text=\"%3\" from=%4 to=%5 target=%6")
+                    .arg(event->type() == QEvent::KeyPress ? "KeyPress" : "ShortcutOverride")
+                    .arg(keyEvent->key())
+                    .arg(keyEvent->text())
+                    .arg(formatModifiers(modifiers))
+                    .arg(formatModifiers(remappedModifiers))
+                    .arg(watched->metaObject()->className());
+            appendKeyLogLine(remapLine);
 
             remapping = true;
             QCoreApplication::sendEvent(watched, &remappedEvent);
