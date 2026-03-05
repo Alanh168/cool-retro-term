@@ -476,6 +476,17 @@ Item {
              "  return outColor;
              }" +
 
+             "vec3 convertBloomWithChroma(vec3 inColor) {" +
+             (colorConversion ?
+                 "float sat = max(inColor.r, max(inColor.g, inColor.b)) - min(inColor.r, min(inColor.g, inColor.b));
+                  float chromaWeight = smoothstep(0.01, 0.16, sat);
+                  chromaWeight = pow(chromaWeight, 0.35);
+                  vec3 monoColor = fontColor.rgb * rgb2grey(inColor);
+                  return mix(monoColor, inColor, chromaWeight);"
+             :
+                 "return convertWithChroma(inColor);") +
+             "}" +
+
              shaderLibrary.rasterizationShader +
 
              "void main() {" +
@@ -526,7 +537,7 @@ Item {
                          "vec4 bloomFullColor = texture2D(bloomSource, txt_coords);
                           vec3 bloomColor = bloomFullColor.rgb;
                           float bloomAlpha = bloomFullColor.a;
-                          bloomColor = convertWithChroma(bloomColor);
+                          bloomColor = convertBloomWithChroma(bloomColor);
                           finalColor += clamp(bloomColor * bloom * bloomAlpha, 0.0, 0.5);"
                      : "") +
 
