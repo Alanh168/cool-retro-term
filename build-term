@@ -9,10 +9,15 @@ cd "$(dirname "$0")"
 # 4. Build
 make -j$(sysctl -n hw.ncpu)
 
-# 5. Rewrite the app bundle to use its bundled Qt frameworks and plugins
+# 5. Refresh bundled QMLTermWidget plugin from the just-built module output.
+rm -rf cool-retro-term.app/Contents/PlugIns/QMLTermWidget
+mkdir -p cool-retro-term.app/Contents/PlugIns
+rsync -a --delete qmltermwidget/QMLTermWidget/ cool-retro-term.app/Contents/PlugIns/QMLTermWidget/
+
+# 6. Rewrite the app bundle to use its bundled Qt frameworks and plugins
 /opt/homebrew/opt/qt@5/bin/macdeployqt cool-retro-term.app
 
-# 6. Copy to Applications (as test app) and re-sign it
+# 7. Copy to Applications (as test app) and re-sign it
 rsync -a --delete cool-retro-term.app/ "/Applications/Retro Terminal TEST.app/" && codesign --force --deep --sign - "/Applications/Retro Terminal TEST.app"
 
 echo "Done. Launch 'Retro Terminal TEST' from Applications."
