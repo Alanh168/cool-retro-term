@@ -18,3 +18,4 @@ make -j$(sysctl -n hw.ncpu)
 rsync -a --delete cool-retro-term.app/ "/Applications/Retro Terminal TEST.app/" && codesign --force --deep --sign - "/Applications/Retro Terminal TEST.app"
 
 Steps 3-6 are what you repeat after making changes. The built app is at cool-retro-term/cool-retro-term.app.
+# A build script has been made for running Steps 3-6 in sequence. Type ./build-term in the terminal to run the script
