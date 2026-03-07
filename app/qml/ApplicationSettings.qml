@@ -70,6 +70,9 @@ QtObject {
     property bool useCustomCommand: false
     property string customCommand: ""
 
+    // Directory containing sprite PNG files for the Image Overlay (set from main.cpp context property)
+    property string spriteDirPath: spriteDirectory
+
     property string _backgroundColor: "#000000"
     property string _fontColor: "#0ccc68"
     property string saturatedColor: Utils.mix(Utils.strToColor("#FFFFFF"),

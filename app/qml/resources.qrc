@@ -39,6 +39,7 @@
         <file>fonts/1985-ibm-pc-vga/PxPlus_IBM_VGA8.ttf</file>
         <file>fonts/1977-commodore-pet/PetMe.ttf</file>
         <file>BurnInEffect.qml</file>
+        <file>ImageOverlay.qml</file>
         <file>fonts/modern-terminus/TerminusTTF-4.46.0.ttf</file>
         <file>TerminalFrame.qml</file>
         <file>menus/WindowMenu.qml</file>

@@ -128,6 +128,10 @@ Item{
             onFinished: {
                 Qt.quit()
             }
+
+            onSpriteCommandReceived: {
+                imageOverlay.handleSpriteCommand(command)
+            }
         }
 
         QMLTermScrollbar {
@@ -143,6 +147,17 @@ Item{
                 radius: width * 0.25
                 opacity: 0.7
             }
+        }
+
+        // Image Overlay: renders sprite PNGs at native resolution on top of terminal text.
+        // Sprite commands arrive via OSC 99 escape sequences.
+        ImageOverlay {
+            id: imageOverlay
+            anchors.fill: parent
+            spriteDirectory: appSettings.spriteDirPath || ""
+            cellWidth: kterminal.fontMetrics.width
+            cellHeight: kterminal.fontMetrics.height
+            terminalMargin: 0
         }
 
         function handleFontChanged(fontFamily, pixelSize, lineSpacing, screenScaling, fontWidth) {
