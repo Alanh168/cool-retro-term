@@ -10,8 +10,9 @@
 
 import QtQuick 2.2
 
-Item {
+Rectangle {
     id: imageOverlay
+    color: "transparent"
 
     // The directory containing sprite PNG files (e.g., agumon.png, monster_wolf.png)
     property string spriteDirectory: ""
@@ -25,36 +26,117 @@ Item {
 
     // Active sprite commands — list of {spriteId, cellX, cellY, targetCellHeight}
     property var activeSprites: []
+    property int clearGeneration: 0
+
+    function clearSprites() {
+        clearGeneration += 1;
+
+        for (var i = 0; i < spriteRepeater.count; i += 1) {
+            var item = spriteRepeater.itemAt(i);
+            if (item) {
+                item.source = "";
+                item.sourceCandidates = [];
+            }
+        }
+
+        activeSprites = [];
+        spriteRepeater.model = [];
+    }
+
+    function parseFrameSprites(payload, generation) {
+        var sprites = [];
+        if (!payload)
+            return sprites;
+
+        var entries = payload.split("|");
+        for (var i = 0; i < entries.length; i += 1) {
+            var entry = entries[i];
+            if (!entry)
+                continue;
+
+            var parts = entry.split(",");
+            if (parts.length < 4)
+                continue;
+
+            var spriteId = parts[0];
+            var cellX = parseFloat(parts[1]);
+            var cellY = parseFloat(parts[2]);
+            var targetCellHeight = parseFloat(parts[3]);
+
+            if (spriteId && !isNaN(cellX) && !isNaN(cellY)
+                && !isNaN(targetCellHeight) && targetCellHeight > 0) {
+                sprites.push({
+                    spriteId: spriteId,
+                    cellX: cellX,
+                    cellY: cellY,
+                    targetCellHeight: targetCellHeight,
+                    generation: generation
+                });
+            }
+        }
+
+        return sprites;
+    }
 
     // Process an incoming sprite command string
     function handleSpriteCommand(command) {
-        if (command === "clear") {
-            activeSprites = [];
-            spriteRepeater.model = [];
+        var normalizedCommand = (command || "").trim();
+        if (normalizedCommand === "clear") {
+            clearSprites();
+            return;
+        }
+
+        if (normalizedCommand.indexOf("frame;") === 0) {
+            var frameParts = normalizedCommand.split(";");
+            if (frameParts.length < 2) {
+                console.warn("ImageOverlay: malformed frame command: " + normalizedCommand);
+                return;
+            }
+
+            var generation = parseInt(frameParts[1], 10);
+            if (isNaN(generation)) {
+                console.warn("ImageOverlay: invalid frame generation: " + normalizedCommand);
+                return;
+            }
+            if (generation < clearGeneration)
+                return;
+
+            var payload = frameParts.length > 2 ? frameParts.slice(2).join(";") : "";
+            var frameSprites = parseFrameSprites(payload, generation);
+            clearGeneration = generation;
+            activeSprites = frameSprites;
+            spriteRepeater.model = frameSprites;
             return;
         }
 
         // Parse: "sprite_id;cell_x;cell_y;target_cell_height"
-        var parts = command.split(";");
+        var parts = normalizedCommand.split(";");
         if (parts.length < 4) {
-            console.warn("ImageOverlay: malformed sprite command: " + command);
+            console.warn("ImageOverlay: malformed sprite command: " + normalizedCommand);
             return;
         }
 
         var spriteId = parts[0];
-        var cellX = parseInt(parts[1]);
-        var cellY = parseInt(parts[2]);
+        var cellX = parseFloat(parts[1]);
+        var cellY = parseFloat(parts[2]);
         var targetCellHeight = parseFloat(parts[3]);
 
         if (isNaN(cellX) || isNaN(cellY) || isNaN(targetCellHeight) || targetCellHeight <= 0) {
-            console.warn("ImageOverlay: invalid values in command: " + command);
+            console.warn("ImageOverlay: invalid values in command: " + normalizedCommand);
             return;
         }
 
-        // Always replace entire model to avoid stale sprites from resize races
-        var sprite = { spriteId: spriteId, cellX: cellX, cellY: cellY, targetCellHeight: targetCellHeight };
-        activeSprites = [sprite];
-        spriteRepeater.model = [sprite];
+        var sprite = {
+            spriteId: spriteId,
+            cellX: cellX,
+            cellY: cellY,
+            targetCellHeight: targetCellHeight,
+            generation: clearGeneration
+        };
+        var nextSprites = activeSprites.slice(0);
+        nextSprites.push(sprite);
+        activeSprites = nextSprites;
+        spriteRepeater.model = nextSprites;
     }
 
     Repeater {
@@ -63,12 +145,39 @@ Item {
 
         Image {
             property var spriteData: modelData
+            property var sourceCandidates: []
+            property int sourceIndex: 0
+
+            function buildSourceCandidates(spriteId) {
+                var candidates = [];
+                var normalizedId = spriteId.replace(/_/g, "-");
+
+                candidates.push(spriteDirectory + "/" + normalizedId + ".png");
+
+                if (normalizedId !== spriteId) {
+                    candidates.push(spriteDirectory + "/" + spriteId + ".png");
+                }
+
+                if (spriteId.indexOf("/") === -1) {
+                    candidates.push(spriteDirectory + "/official/" + normalizedId + ".png");
+                    if (normalizedId !== spriteId) {
+                        candidates.push(spriteDirectory + "/official/" + spriteId + ".png");
+                    }
+                }
+
+                return candidates;
+            }
+
+            function resetSource() {
+                sourceCandidates = buildSourceCandidates(spriteData.spriteId);
+                sourceIndex = 0;
+                source = sourceCandidates.length > 0 ? sourceCandidates[0] : "";
+            }
 
             // Target pixel height based on cell height
             property real targetHeight: spriteData.targetCellHeight * cellHeight
 
-            // Convert sprite_ref to filename: underscores become hyphens, append .png
-            source: spriteDirectory + "/" + spriteData.spriteId.replace(/_/g, "-") + ".png"
+            source: ""
 
             // Size: fit to target cell height, preserve aspect ratio
             height: targetHeight
@@ -82,12 +191,15 @@ Item {
 
             fillMode: Image.PreserveAspectFit
             smooth: false  // Keep pixel art crisp
-            visible: status === Image.Ready
+            visible: status === Image.Ready && spriteData.generation === imageOverlay.clearGeneration
+
+            Component.onCompleted: resetSource()
+            onSpriteDataChanged: resetSource()
 
             onStatusChanged: {
-                if (status === Image.Error) {
-                    // Try alternate naming: without hyphen conversion
-                    source = spriteDirectory + "/" + spriteData.spriteId + ".png";
+                if (status === Image.Error && sourceIndex + 1 < sourceCandidates.length) {
+                    sourceIndex += 1;
+                    source = sourceCandidates[sourceIndex];
                 }
             }
         }

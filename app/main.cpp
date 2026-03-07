@@ -23,6 +23,67 @@
 
 namespace {
 
+QString cleanExistingDirectory(const QString& path)
+{
+    if (path.isEmpty())
+        return QString();
+
+    QFileInfo info(path);
+    if (!info.exists() || !info.isDir())
+        return QString();
+
+    return QDir(info.absoluteFilePath()).absolutePath();
+}
+
+void addUniqueDirectory(QStringList& candidates, const QString& path)
+{
+    QString cleanPath = cleanExistingDirectory(path);
+    if (!cleanPath.isEmpty() && !candidates.contains(cleanPath))
+        candidates.append(cleanPath);
+}
+
+void addCheckoutSpriteCandidates(QStringList& candidates, const QString& baseDir)
+{
+    if (baseDir.isEmpty())
+        return;
+
+    QDir dir(baseDir);
+    addUniqueDirectory(candidates, dir.filePath("extras/sprites"));
+    addUniqueDirectory(candidates, dir.filePath("wordgrinder/extras/sprites"));
+}
+
+void addScannedRepoSpriteCandidates(QStringList& candidates, const QString& parentDirPath)
+{
+    QDir parentDir(parentDirPath);
+    if (!parentDir.exists())
+        return;
+
+    QFileInfoList entries = parentDir.entryInfoList(QDir::Dirs | QDir::NoDotAndDotDot, QDir::Name);
+    for (const QFileInfo& entry : entries)
+        addUniqueDirectory(candidates, QDir(entry.absoluteFilePath()).filePath("wordgrinder/extras/sprites"));
+}
+
+QString detectSpriteDirectory(const QString& resolvedWorkdir)
+{
+    QString envSpriteDir = cleanExistingDirectory(qEnvironmentVariable("CRT_SPRITE_DIRECTORY"));
+    if (!envSpriteDir.isEmpty())
+        return envSpriteDir;
+
+    QStringList candidates;
+    addCheckoutSpriteCandidates(candidates, resolvedWorkdir);
+    addCheckoutSpriteCandidates(candidates, QDir::currentPath());
+
+    const QString homeDir = QDir::homePath();
+    addScannedRepoSpriteCandidates(candidates, QDir(homeDir).filePath("repos"));
+    addScannedRepoSpriteCandidates(candidates, QDir(homeDir).filePath("src"));
+    addScannedRepoSpriteCandidates(candidates, QDir(homeDir).filePath("dev"));
+    addScannedRepoSpriteCandidates(candidates, QDir(homeDir).filePath("code"));
+    addUniqueDirectory(candidates, QDir(homeDir).filePath(".wordgrinder/sprites"));
+    addUniqueDirectory(candidates, QDir(homeDir).filePath(".config/cool-retro-term/sprites"));
+
+    return candidates.value(0);
+}
+
 
 class KeyLogger : public QObject
 {
@@ -166,14 +227,24 @@ int main(int argc, char *argv[])
                 "storageNamespace",
                 QFileInfo(QDir(QCoreApplication::applicationDirPath()).absolutePath()).absoluteFilePath());
 
-    engine.rootContext()->setContextProperty("workdir", getNamedArgument(args, "--workdir", "$HOME"));
+    QString workdir = getNamedArgument(args, "--workdir", "$HOME");
+    QString resolvedWorkdir = workdir;
+    if (resolvedWorkdir.startsWith("$HOME"))
+        resolvedWorkdir.replace(0, 5, QDir::homePath());
+    else if (resolvedWorkdir == "~")
+        resolvedWorkdir = QDir::homePath();
+    engine.rootContext()->setContextProperty("workdir", workdir);
     engine.rootContext()->setContextProperty("fileIO", &fileIO);
     engine.rootContext()->setContextProperty("monospaceSystemFonts", monospaceFontManager.retrieveMonospaceFonts());
 
     engine.rootContext()->setContextProperty("devicePixelRatio", app.devicePixelRatio());
 
     // Sprite directory for the Image Overlay (OSC 99 sprite rendering)
-    QString spriteDir = QDir::homePath() + "/.config/cool-retro-term/sprites";
+    QString spriteDir = detectSpriteDirectory(resolvedWorkdir);
+    if (!spriteDir.isEmpty()) {
+        qputenv("CRT_SPRITE_DIRECTORY", QFile::encodeName(spriteDir));
+        qputenv("WG_SPRITE_ROOT", QFile::encodeName(spriteDir));
+    }
     engine.rootContext()->setContextProperty("spriteDirectory", QUrl::fromLocalFile(spriteDir).toString());
 
     // Manage import paths for Linux and OSX.
