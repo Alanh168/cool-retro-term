@@ -51,22 +51,10 @@ Item {
             return;
         }
 
-        // Replace any existing sprite at the same position, or add new
-        var sprites = activeSprites.slice(); // copy
-        var found = false;
-        for (var i = 0; i < sprites.length; i++) {
-            if (sprites[i].cellX === cellX && sprites[i].cellY === cellY) {
-                sprites[i] = { spriteId: spriteId, cellX: cellX, cellY: cellY, targetCellHeight: targetCellHeight };
-                found = true;
-                break;
-            }
-        }
-        if (!found) {
-            sprites.push({ spriteId: spriteId, cellX: cellX, cellY: cellY, targetCellHeight: targetCellHeight });
-        }
-
-        activeSprites = sprites;
-        spriteRepeater.model = sprites;
+        // Always replace entire model to avoid stale sprites from resize races
+        var sprite = { spriteId: spriteId, cellX: cellX, cellY: cellY, targetCellHeight: targetCellHeight };
+        activeSprites = [sprite];
+        spriteRepeater.model = [sprite];
     }
 
     Repeater {
