@@ -3,8 +3,10 @@
 * Renders sprite PNGs at native resolution on top of the terminal grid.
 * Sprite commands arrive via OSC 99 escape sequences from the terminal program.
 *
-* Command format: \e]99;sprite_id;cell_x;cell_y;target_cell_height\a
-*   target_cell_height: how many terminal cells tall the sprite should be
+* Command format: \e]99;sprite_id;cell_x;cell_y;target_cell_height[;target_cell_width;anchor]\a
+*   target_cell_height: how many terminal cells tall the sprite may be
+*   target_cell_width: optional max width in terminal cells
+*   anchor: optional horizontal anchor ("right" or "center")
 * Clear command:  \e]99;clear\a
 *******************************************************************************/
 
@@ -24,7 +26,8 @@ Rectangle {
     // Terminal margin offset
     property real terminalMargin: 0
 
-    // Active sprite commands — list of {spriteId, cellX, cellY, targetCellHeight}
+    // Active sprite commands — list of
+    // {spriteId, cellX, cellY, targetCellHeight, targetCellWidth, anchor}
     property var activeSprites: []
     property int clearGeneration: 0
 
@@ -62,6 +65,12 @@ Rectangle {
             var cellX = parseFloat(parts[1]);
             var cellY = parseFloat(parts[2]);
             var targetCellHeight = parseFloat(parts[3]);
+            var targetCellWidth = (parts.length > 4 && parts[4] !== "")
+                ? parseFloat(parts[4])
+                : 0;
+            var anchor = parts.length > 5 ? parts[5] : "right";
+            if (anchor !== "center")
+                anchor = "right";
 
             if (spriteId && !isNaN(cellX) && !isNaN(cellY)
                 && !isNaN(targetCellHeight) && targetCellHeight > 0) {
@@ -70,6 +79,10 @@ Rectangle {
                     cellX: cellX,
                     cellY: cellY,
                     targetCellHeight: targetCellHeight,
+                    targetCellWidth: (!isNaN(targetCellWidth) && targetCellWidth > 0)
+                        ? targetCellWidth
+                        : 0,
+                    anchor: anchor,
                     generation: generation
                 });
             }
@@ -109,7 +122,7 @@ Rectangle {
             return;
         }
 
-        // Parse: "sprite_id;cell_x;cell_y;target_cell_height"
+        // Parse: "sprite_id;cell_x;cell_y;target_cell_height[;target_cell_width;anchor]"
         var parts = normalizedCommand.split(";");
         if (parts.length < 4) {
             console.warn("ImageOverlay: malformed sprite command: " + normalizedCommand);
@@ -120,6 +133,12 @@ Rectangle {
         var cellX = parseFloat(parts[1]);
         var cellY = parseFloat(parts[2]);
         var targetCellHeight = parseFloat(parts[3]);
+        var targetCellWidth = (parts.length > 4 && parts[4] !== "")
+            ? parseFloat(parts[4])
+            : 0;
+        var anchor = parts.length > 5 ? parts[5] : "right";
+        if (anchor !== "center")
+            anchor = "right";
 
         if (isNaN(cellX) || isNaN(cellY) || isNaN(targetCellHeight) || targetCellHeight <= 0) {
             console.warn("ImageOverlay: invalid values in command: " + normalizedCommand);
@@ -131,6 +150,10 @@ Rectangle {
             cellX: cellX,
             cellY: cellY,
             targetCellHeight: targetCellHeight,
+            targetCellWidth: (!isNaN(targetCellWidth) && targetCellWidth > 0)
+                ? targetCellWidth
+                : 0,
+            anchor: anchor,
             generation: clearGeneration
         };
         var nextSprites = activeSprites.slice(0);
@@ -176,18 +199,35 @@ Rectangle {
 
             // Target pixel height based on cell height
             property real targetHeight: spriteData.targetCellHeight * cellHeight
+            property bool hasWidthConstraint: spriteData.targetCellWidth > 0
+            property real targetWidth: hasWidthConstraint
+                ? spriteData.targetCellWidth * cellWidth
+                : 0
+            property real fittedScale: (sourceSize.width > 0 && sourceSize.height > 0)
+                ? Math.min(targetWidth / sourceSize.width, targetHeight / sourceSize.height)
+                : 0
 
             source: ""
 
-            // Size: fit to target cell height, preserve aspect ratio
-            height: targetHeight
-            width: (sourceSize.width > 0 && sourceSize.height > 0)
-                   ? sourceSize.width * (targetHeight / sourceSize.height)
-                   : targetHeight
+            // Size: preserve aspect ratio, optionally fit within a bounding box.
+            height: hasWidthConstraint
+                ? ((sourceSize.width > 0 && sourceSize.height > 0)
+                    ? sourceSize.height * fittedScale
+                    : 0)
+                : targetHeight
+            width: hasWidthConstraint
+                ? ((sourceSize.width > 0 && sourceSize.height > 0)
+                    ? sourceSize.width * fittedScale
+                    : 0)
+                : ((sourceSize.width > 0 && sourceSize.height > 0)
+                    ? sourceSize.width * (targetHeight / sourceSize.height)
+                    : targetHeight)
 
-            // Position: right edge aligns with cellX, vertically centered on the row.
-            x: spriteData.cellX * cellWidth + terminalMargin - width
-            y: spriteData.cellY * cellHeight + terminalMargin - (targetHeight - cellHeight) / 2
+            // Position: right-aligned by default, or centered when requested.
+            x: spriteData.anchor === "center"
+                ? spriteData.cellX * cellWidth + terminalMargin - (width / 2)
+                : spriteData.cellX * cellWidth + terminalMargin - width
+            y: spriteData.cellY * cellHeight + terminalMargin - (height - cellHeight) / 2
 
             fillMode: Image.PreserveAspectFit
             smooth: false  // Keep pixel art crisp
