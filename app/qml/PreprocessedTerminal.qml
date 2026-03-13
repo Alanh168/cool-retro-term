@@ -43,19 +43,44 @@ Item{
     property size terminalSize: kterminal.terminalSize
     property size fontMetrics: kterminal.fontMetrics
 
-    // Manage copy and paste
+    // Forward Cmd shortcuts to the terminal as Ctrl key equivalents so
+    // wordgrinder (or whatever program is running) handles them natively.
     Connections {
         target: copyAction
-
-        onTriggered: {
-            kterminal.copyClipboard()
-        }
+        onTriggered: ksession.sendText("\x03")   // Ctrl+C
     }
     Connections {
         target: pasteAction
+        onTriggered: kterminal.pasteClipboard()   // System clipboard paste
+    }
+    Connections {
+        target: saveAction
+        onTriggered: ksession.sendText("\x13")   // Ctrl+S
+    }
+    Connections {
+        target: selectAllAction
+        onTriggered: ksession.sendText("\x01")   // Ctrl+A
+    }
 
+    // Two-stage Cmd+Q: first press sends Ctrl+Q to the running program
+    // (e.g. wordgrinder's graceful exit).  If pressed again within 2 s
+    // (i.e. we're now at a shell prompt), quit the terminal app outright.
+    property bool _quitPending: false
+    Timer {
+        id: quitResetTimer
+        interval: 2000
+        onTriggered: terminalContainer._quitPending = false
+    }
+    Connections {
+        target: quitAction
         onTriggered: {
-            kterminal.pasteClipboard()
+            if (terminalContainer._quitPending) {
+                Qt.quit()
+            } else {
+                terminalContainer._quitPending = true
+                quitResetTimer.restart()
+                ksession.sendText("\x11")   // Ctrl+Q
+            }
         }
     }
 

@@ -95,7 +95,6 @@ ApplicationWindow {
         id: quitAction
         text: qsTr("Quit")
         shortcut: "Ctrl+Shift+Q"
-        onTriggered: Qt.quit()
     }
     Action {
         id: showsettingsAction
@@ -115,6 +114,14 @@ ApplicationWindow {
         id: pasteAction
         text: qsTr("Paste")
         shortcut: "Ctrl+Shift+V"
+    }
+    Action {
+        id: saveAction
+        text: qsTr("Save")
+    }
+    Action {
+        id: selectAllAction
+        text: qsTr("Select All")
     }
     Action {
         id: zoomIn
@@ -169,9 +176,12 @@ ApplicationWindow {
         }
     }
     onClosing: {
-        // OSX Since we are currently supporting only one window
-        // quit the application when it is closed.
-        if (appSettings.isMacOS)
-            Qt.quit()
+        // On macOS, route through the quit action so wordgrinder can
+        // save before exiting.  The window close is deferred until
+        // the terminal session finishes (see onFinished handler).
+        if (appSettings.isMacOS) {
+            close.accepted = false
+            quitAction.trigger()
+        }
     }
 }

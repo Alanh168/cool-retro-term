@@ -27,8 +27,13 @@ MenuBar {
     Menu {
         title: qsTr("File")
         MenuItem {
+            text: saveAction.text
+            shortcut: "Meta+S"
+            onTriggered: saveAction.trigger()
+        }
+        MenuItem {
             text: quitAction.text
-            shortcut: "Meta+Shift+Q"
+            shortcut: "Meta+Q"
             onTriggered: quitAction.trigger()
         }
     }
@@ -36,13 +41,18 @@ MenuBar {
         title: qsTr("Edit")
         MenuItem {
             text: copyAction.text
-            shortcut: "Meta+Shift+C"
+            shortcut: "Meta+C"
             onTriggered: copyAction.trigger()
         }
         MenuItem {
             text: pasteAction.text
-            shortcut: "Meta+Shift+V"
+            shortcut: "Meta+V"
             onTriggered: pasteAction.trigger()
+        }
+        MenuItem {
+            text: selectAllAction.text
+            shortcut: "Meta+A"
+            onTriggered: selectAllAction.trigger()
         }
         MenuSeparator {}
         MenuItem {
