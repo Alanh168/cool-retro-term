@@ -1,4 +1,4 @@
 [submodule "qmltermwidget"]
 	path = qmltermwidget
-	url = https://github.com/Swordfish90/qmltermwidget
-	branch = unstable
+	url = https://github.com/Alanh168/qmltermwidget.git
+	branch = retrowriter
