@@ -3,8 +3,17 @@ set -e
 
 cd "$(dirname "$0")"
 
+# Resolve Qt5 via Homebrew so this works on both Apple Silicon
+# (/opt/homebrew) and Intel (/usr/local).
+QT_PREFIX="$(brew --prefix qt@5 2>/dev/null)"
+if [ -z "$QT_PREFIX" ] || [ ! -x "$QT_PREFIX/bin/qmake" ]; then
+	echo "error: qt@5 not found. Install it with: brew install qt@5" >&2
+	exit 1
+fi
+echo "Using Qt at $QT_PREFIX"
+
 # 3. Generate Makefiles with qmake
-/opt/homebrew/opt/qt@5/bin/qmake
+"$QT_PREFIX/bin/qmake"
 
 # 4. Build
 make -j$(sysctl -n hw.ncpu)
@@ -15,7 +24,7 @@ mkdir -p cool-retro-term.app/Contents/PlugIns
 rsync -a --delete qmltermwidget/QMLTermWidget/ cool-retro-term.app/Contents/PlugIns/QMLTermWidget/
 
 # 6. Rewrite the app bundle to use its bundled Qt frameworks and plugins
-/opt/homebrew/opt/qt@5/bin/macdeployqt cool-retro-term.app
+"$QT_PREFIX/bin/macdeployqt" cool-retro-term.app
 
 # 7. Copy to Applications (as test app) and re-sign it
 rsync -a --delete cool-retro-term.app/ "/Applications/Retro Terminal TEST.app/" && codesign --force --deep --sign - "/Applications/Retro Terminal TEST.app"
